@@ -10,7 +10,7 @@ OBJECTS_GLOBAL_LIST="podsecuritypolicy"
 OBJECTS_NAME_EXCLUDE_LIST="deployment.extensions/default-http-backend|deployment.extensions/nginx-ingress-controller"
 
 # conftest image
-CONFTEST_IMAGE=kube-dtr-dev.fr.world.socgen/sgcaashub/conftest:audit-k8s-apis
+CONFTEST_IMAGE=dockerpac/conftest:audit-k8s-apis
 
 usage()
 {

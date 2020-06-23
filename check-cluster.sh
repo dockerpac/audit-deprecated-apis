@@ -30,6 +30,24 @@ while [ "$1" != "" ]; do
     shift
 done
 
+# Prompt if getting objects and OUTPUT_DIR already exists
+if [ "${SKIP_GET}" != "1" ] ; then
+	if [ -d "${OUTPUT_DIR}" ] ; then
+		echo "${OUTPUT_DIR} already exists, overwrite ? [y/N]"
+		printf "> "
+		read REP
+		if [ "${REP}" != "y" -a "${REP}" != "Y" ] ; then
+			echo "Canceled"
+			exit 0
+		else
+			rm -rf ${OUTPUT_DIR}
+		fi
+	fi
+		
+else
+	echo "Using objects in ${OUTPUT_DIR}"
+fi
+
 # Funtion definition
 
 function check_kubectl_exist () {
@@ -47,12 +65,20 @@ function get_namespaces () {
 
 ## main
 if [ "$SKIP_GET" = "1" ] ; then
-    NAMESPACE_LIST=$(ls -1 ${OUTPUT_DIR} | grep -v output.txt 2>/dev/null)
+    NAMESPACE_LIST=$(ls -1 ${OUTPUT_DIR} 2>/dev/null | grep -v output.txt 2>/dev/null)
+    if [ -z "${NAMESPACE_LIST}" ] ; then
+      echo "Cannot get list of namespaces"
+      exit 1
+    fi
 else
     # check kubectl binary exists
     check_kubectl_exist
 
     NAMESPACE_LIST=$(get_namespaces) 
+    if [ -z "${NAMESPACE_LIST}" ] ; then
+      echo "Cannot get list of namespaces"
+      exit 1
+    fi
     # Adding virtual "global" namespace for objects not namespaced
     NAMESPACE_LIST="global $NAMESPACE_LIST"
 fi
@@ -82,8 +108,8 @@ cat ${OUTPUT_DIR}/output.txt | column -s '#' -t
 COUNT_FAIL=$(grep FAIL ${OUTPUT_DIR}/output.txt 2>/dev/null | wc -l)
 COUNT_UNKNOWN=$(grep UNKNOWN ${OUTPUT_DIR}/output.txt 2>/dev/null | wc -l)
 echo -e "\nResults :"
-echo "$(ls -1 ${OUTPUT_DIR} | wc -l) namespaces analyzed - $(cat ${OUTPUT_DIR}/output.txt | grep FAIL | awk ' { print $1 } ' | sort | uniq -c | wc -l) namespaces with at least 1 FAIL"
-echo "$COUNT_FAIL fails, $COUNT_UNKNOWN unknowns (took $(($end - $start))s)"
+echo "$(ls -1 ${OUTPUT_DIR} | grep -v output.txt | wc -l) namespaces analyzed - $(cat ${OUTPUT_DIR}/output.txt | grep FAIL | awk ' { print $1 } ' | sort | uniq -c | wc -l) namespaces with at least 1 FAIL"
+echo "$COUNT_FAIL FAIL, $COUNT_UNKNOWN UNKNOWN (took $(($end - $start))s)"
 echo "Top 10 namespaces with FAIL :"
 cat ${OUTPUT_DIR}/output.txt | grep FAIL | awk ' { print $1 } ' | sort | uniq -c | sort | tail -10
 
